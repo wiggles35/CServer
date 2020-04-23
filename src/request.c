@@ -30,22 +30,42 @@ int parse_request_headers(Request *r);
 Request * accept_request(int sfd) {
     Request *r;
     struct sockaddr raddr;
-    socklen_t rlen;
+    socklen_t rlen = sizeof(struct sockaddr);
 
     /* Allocate request struct (zeroed) */
+    r = calloc(1, sizeof(Request));
+    if(!r){
+        debug( "calloc: %s\n", strerror(errno));
+        return NULL;
+    }
 
+    r->headers = calloc(1, sizeof(Header));
+    
     /* Accept a client */
+    r->fd = accept(sfd, &raddr, &rlen);
+    if (r->fd < 0) {
+        debug( "accept failed: %s\n", strerror(errno));
+        free(r);
+        return NULL;
+    }
 
     /* Lookup client information */
+    if(getnameinfo(&raddr, rlen, r->host, sizeof(r->host), r->port, sizeof(r->port), NI_NUMERICHOST | NI_NUMERICSERV) < 0){
+        debug("getnameinfo: %s\n", gai_strerror(errno));
+        free(r);
+        return NULL;
+    }
 
     /* Open socket stream */
+    r->stream = fdopen(r->fd, "w+");
+    if (!r->stream) {
+        fprintf(stderr, "fdopen failed: %s\n", strerror(errno));
+        close(r->fd);
+        free(r);
+    }
 
     log("Accepted request from %s:%s", r->host, r->port);
     return r;
-
-fail:
-    /* Deallocate request struct */
-    return NULL;
 }
 
 /**
@@ -66,12 +86,26 @@ void free_request(Request *r) {
     }
 
     /* Close socket or fd */
+    close(r->fd);
 
     /* Free allocated strings */
+    free(r->method);
+    free(r->uri);
+    free(r->path);
+    free(r->query);
 
     /* Free headers */
+    //This is probably wrong
+    Header *head = r->headers;
+    Header *tmp;
+    while(head != NULL){
+        tmp = head;
+        head = head->next;
+        free(tmp);   
+    }
 
     /* Free request */
+    free(r);
 }
 
 /**
@@ -85,8 +119,17 @@ void free_request(Request *r) {
  **/
 int parse_request(Request *r) {
     /* Parse HTTP Request Method */
+    if (parse_request_method(r) < 0) {
+        debug("parse_request_method failed: %s", strerror(errno));
+        return -1;
+    }
 
-    /* Parse HTTP Requet Headers*/
+    /* Parse HTTP Requset Headers*/
+    if (parse_request_headers(r) < 0) {
+        debug("parse_request_headers failed: %s", strerror(errno));
+        return -1;
+    }
+
     return 0;
 }
 
@@ -114,10 +157,26 @@ int parse_request_method(Request *r) {
     char *query;
 
     /* Read line from socket */
+    if(!fgets(buffer, BUFSIZ, r->stream)){
+        debug("fgets failed");
+        return -1;
+    }
 
     /* Parse method and uri */
-
+    method    = strtok(buffer, WHITESPACE);
+    uri       = strtok(NULL, WHITESPACE);
     /* Parse query from uri */
+    char* q_mark = strchr(uri, (int)'?');
+    if(q_mark){
+        query = q_mark+1;
+        *(q_mark) = '\0';
+    }
+    else 
+        query = NULL;
+    
+    r->method = strdup(method);
+    r->uri = strdup(uri);
+    r->query = strdup(query);
 
     /* Record method, uri, and query in request struct */
     debug("HTTP METHOD: %s", r->method);
@@ -126,8 +185,6 @@ int parse_request_method(Request *r) {
 
     return 0;
 
-fail:
-    return -1;
 }
 
 /**
@@ -158,12 +215,33 @@ fail:
  *      headers.append(header)
  **/
 int parse_request_headers(Request *r) {
-    Header *curr = NULL;
+    Header *curr = r->headers;
     char buffer[BUFSIZ];
     char *name;
     char *data;
+    char *colon;
+    bool has_headers = false;
 
     /* Parse headers from socket */
+    while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
+        has_headers = true;
+        colon = strchr(buffer, (int)':');
+        //error check??? do we need to check if colon == NULL?
+        *colon++ = '\0';
+        name = buffer;
+        data = colon;
+
+        curr->name = name;
+        curr->data = data; 
+        curr->next = calloc(1, sizeof(Header));
+        curr = curr->next;
+        
+
+    }
+    if(!has_headers){
+        debug("No headers");
+        return -1;
+    }
 
 #ifndef NDEBUG
     for (Header *header = r->headers; header; header = header->next) {
@@ -172,8 +250,6 @@ int parse_request_headers(Request *r) {
 #endif
     return 0;
 
-fail:
-    return -1;
 }
 
 /* vim: set expandtab sts=4 sw=4 ts=8 ft=c: */
