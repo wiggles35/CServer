@@ -205,8 +205,19 @@ Status  handle_error(Request *r, Status status) {
     const char *status_string = http_status_string(status);
 
     /* Write HTTP Header */
+    fprintf(r->stream, "HTTP/1.0 %s\r\n", status_string);
+    fprintf(r->stream, "Content-Type: text/html\r\n", mimetype);
+    fprintf(r->stream, "\r\n");
 
     /* Write HTML Description of Error*/
+    fprintf(r->stream, "<html>\r\n");
+    fprintf(r->stream, "<head>\r\n");
+    fprintf(r->stream, "<title>%s</title>\r\n", status_string);
+    fprintf(r->stream, "</head>\r\n");
+    fprintf(r->stream, "<body>\r\n");
+    fprintf(r->stream, "<h1>%s</h1>\r\n", status_string);
+    fprintf(r->stream, "</body>\r\n");
+    fprintf(r->stream, "</html>\r\n");
 
     /* Return specified status */
     return status;
