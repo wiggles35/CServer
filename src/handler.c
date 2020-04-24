@@ -34,8 +34,8 @@ Status  handle_request(Request *r) {
     bool is_exec;
 
     if(parse_request(r) < 0){
-        debug("parse_request");
-        return NULL;
+        debug("parse_request failed");
+        result = HTTP_STATUS_INTERNAL_SERVER_ERROR;
     }
 
     /* Determine request path */
@@ -56,7 +56,7 @@ Status  handle_request(Request *r) {
     }
     // figure out if there is an error
     if (result != HTTP_STATUS_OK) 
-        handle_error(r);
+        handle_error(r, result);
 
     log("HTTP REQUEST STATUS: %s", http_status_string(result));
 
@@ -79,7 +79,7 @@ Status  handle_browse_request(Request *r) {
     int n;
 
     /* Open a directory for reading or scanning */
-    int n = scandir(".", entries, 0, alphasort);
+    n = scandir(".", &entries, 0, alphasort);
     if (n < 0) {
         debug("scandir failed: %s\n", strerror(errno));
         return HTTP_STATUS_NOT_FOUND;
@@ -140,14 +140,12 @@ Status  handle_file_request(Request *r) {
         fwrite(buffer, 1, nread, r->stream);
     }
 
-    fclose(fs);
 
     /* Close file, deallocate mimetype, return OK */
+    fclose(fs);
+    free(mimetype);
     return HTTP_STATUS_OK;
 
-fail:
-    /* Close file, free mimetype, return INTERNAL_SERVER_ERROR */
-    return HTTP_STATUS_INTERNAL_SERVER_ERROR;
 }
 
 /**
@@ -168,11 +166,18 @@ Status  handle_cgi_request(Request *r) {
 
     /* Export CGI environment variables from request:
      * http://en.wikipedia.org/wiki/Common_Gateway_Interface */
-    setenv("QUERY_STRING", r->query);
+    setenv("DOCUMENT_ROOT", RootPath, 1);
+    setenv("QUERY_STRING", r->query, 1);
+    setenv("REMOTE_ADDR", r->host, 1);
+    setenv("REMOTE_PORT", r->port, 1);
+    setenv("REQUEST_METHOD", r->method, 1);
+    setenv("REQUEST_URI", r->uri, 1);
+    setenv("SCRIPT_FILENAME", r->path, 1);
+    setenv("SERVER_PORT", Port, 1);
 
     /* Export CGI environment variables from request headers */
     for(Header *h=r->headers; h; h=h->next){
-        setenv(h->name, h->data);
+        setenv(h->name, h->data, 1);
     }
     /* POpen CGI Script */
     pfs = popen(r->path, "r");
@@ -206,7 +211,7 @@ Status  handle_error(Request *r, Status status) {
 
     /* Write HTTP Header */
     fprintf(r->stream, "HTTP/1.0 %s\r\n", status_string);
-    fprintf(r->stream, "Content-Type: text/html\r\n", mimetype);
+    fprintf(r->stream, "Content-Type: text/html\r\n");
     fprintf(r->stream, "\r\n");
 
     /* Write HTML Description of Error*/
