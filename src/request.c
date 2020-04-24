@@ -40,6 +40,10 @@ Request * accept_request(int sfd) {
     }
 
     r->headers = calloc(1, sizeof(Header));
+    if(!r->headers){
+        debug( "calloc: %s\n", strerror(errno));
+        return NULL;
+    }
     
     /* Accept a client */
     r->fd = accept(sfd, &raddr, &rlen);
@@ -168,7 +172,7 @@ int parse_request_method(Request *r) {
     /* Parse query from uri */
     char* q_mark = strchr(uri, (int)'?');
     if(q_mark){
-        query = q_mark+1;
+        query = skip_whitespace(q_mark);
         *(q_mark) = '\0';
     }
     else 

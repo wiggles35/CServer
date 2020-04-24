@@ -86,24 +86,34 @@ bool parse_options(int argc, char *argv[], ServerMode *mode) {
  * Parses command line options and starts appropriate server
  **/
 int main(int argc, char *argv[]) {
-    /*ServerMode mode; */
+    Status status;
+    ServerMode mode; 
 
     /* Parse command line options */
+    if(!parse_options(argc, argv, &mode)){
+        debug("parse options failed");
+    }
 
     /* Listen to server socket */
+    int sfd = socket_listen(Port);
 
     /* Determine real RootPath */
-    /*
+    char buffer[BUFSIZ];
+    RootPath = realpath(RootPath, buffer);
     log("Listening on port %s", Port);
     debug("RootPath        = %s", RootPath);
     debug("MimeTypesPath   = %s", MimeTypesPath);
     debug("DefaultMimeType = %s", DefaultMimeType);
     debug("ConcurrencyMode = %s", mode == SINGLE ? "Single" : "Forking");
-    */
+    
     /* Start either forking or single HTTP server */
-    //return status; THIS IS DEFAUT, We changed to make makefile work
-    //
-    return 0;
+    if(mode == SINGLE){
+        status = single_server(sfd);
+    }
+    else{
+        status = forking_server(sfd);
+    }
+    return status;
 }
 
 /* vim: set expandtab sts=4 sw=4 ts=8 ft=c: */

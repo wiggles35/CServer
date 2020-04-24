@@ -40,6 +40,7 @@ char * determine_mimetype(const char *path) {
 
     /* Find file extension */
 
+
     /* Open MimeTypesPath file */
 
     /* Scan file for matching file extensions */
@@ -63,7 +64,18 @@ char * determine_mimetype(const char *path) {
  * string must later be free'd.
  **/
 char * determine_request_path(const char *uri) {
-    return NULL;
+    char buffer[BUFSIZ];
+    char *fullpath;
+
+    if ((fullpath = realpath(uri, buffer)) == NULL) {
+        debug("realpath failed: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    if(strncmp(RootPath, fullpath, strlen(RootPath)) != 0)
+        return NULL;   
+
+    return fullpath;
 }
 
 /**
@@ -83,7 +95,8 @@ const char * http_status_string(Status status) {
         "418 I'm A Teapot",
     };
 
-    return NULL;
+
+    return StatusStrings[status];
 }
 
 /**
@@ -93,6 +106,8 @@ const char * http_status_string(Status status) {
  * @return  Point to first whitespace character in s.
  **/
 char * skip_nonwhitespace(char *s) {
+    while (*s != '\n' && *s != ' ' && *s != '\t' && *s != '\r') 
+        s++;
     return s;
 }
 
@@ -103,6 +118,8 @@ char * skip_nonwhitespace(char *s) {
  * @return  Point to first non-whitespace character in s.
  **/
 char * skip_whitespace(char *s) {
+    while (*s == '\n' || *s == ' ' || *s == '\t' || *s == '\r') 
+        s++;
     return s;
 }
 
