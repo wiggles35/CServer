@@ -39,11 +39,18 @@ char * determine_mimetype(const char *path) {
     FILE *fs = NULL;
 
     /* Find file extension */
-
+    ext++ = strchr(path, (int)'.'); 
 
     /* Open MimeTypesPath file */
+    fs = fopen(/etc/mime.types, "r");
+    if (!fs) {
+        debug("fopen failed: %s\n", strerror(errno));
+        return DefaultMimeType;
+    }
 
     /* Scan file for matching file extensions */
+    //not sure what to do here
+    
     return NULL;
 }
 
@@ -94,7 +101,6 @@ const char * http_status_string(Status status) {
         "500 Internal Server Error",
         "418 I'm A Teapot",
     };
-
 
     return StatusStrings[status];
 }
