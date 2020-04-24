@@ -223,28 +223,27 @@ int parse_request_headers(Request *r) {
     char buffer[BUFSIZ];
     char *name;
     char *data;
-    char *colon;
-    bool has_headers = false;
 
     /* Parse headers from socket */
     while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
-        has_headers = true;
-        colon = strchr(buffer, (int)':');
-        //error check??? do we need to check if colon == NULL?
-        *colon++ = '\0';
+        data = strchr(buffer, (int)':');
+        if (!data) {
+            debug("strchr failed: %s\n", strerror(errno));
+            return -1;
+        }
+
+        *data = '\0';
+        chomp(data);
+
         name = buffer;
-        data = colon;
+
+        data = skip_whitespace(++data);
 
         curr->name = name;
         curr->data = data; 
         curr->next = calloc(1, sizeof(Header));
         curr = curr->next;
-        
 
-    }
-    if(!has_headers){
-        debug("No headers");
-        return -1;
     }
 
 #ifndef NDEBUG
