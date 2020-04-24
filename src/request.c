@@ -232,7 +232,7 @@ int parse_request_headers(Request *r) {
             return -1;
         }
 
-        *data = '\0';
+        *data++ = '\0';
         chomp(data);
 
         name = buffer;
