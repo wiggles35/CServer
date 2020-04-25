@@ -43,7 +43,7 @@ Status  handle_request(Request *r) {
     debug("HTTP REQUEST PATH: %s", r->path);
 
     /* Dispatch to appropriate request handler type based on file type */
-    is_dir = (stat(r->path, &s) == 0 && !S_ISDIR(s.st_mode));
+    is_dir = !(stat(r->path, &s) == 0 && !S_ISDIR(s.st_mode));
     
     if (is_dir)
         result = handle_browse_request(r);

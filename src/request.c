@@ -49,14 +49,14 @@ Request * accept_request(int sfd) {
     r->fd = accept(sfd, &raddr, &rlen);
     if (r->fd < 0) {
         debug( "accept failed: %s\n", strerror(errno));
-        free(r);
+        free_request(r);
         return NULL;
     }
 
     /* Lookup client information */
     if(getnameinfo(&raddr, rlen, r->host, sizeof(r->host), r->port, sizeof(r->port), NI_NUMERICHOST | NI_NUMERICSERV) < 0){
         debug("getnameinfo: %s\n", gai_strerror(errno));
-        free(r);
+        free_request(r);
         return NULL;
     }
 
@@ -64,8 +64,8 @@ Request * accept_request(int sfd) {
     r->stream = fdopen(r->fd, "w+");
     if (!r->stream) {
         fprintf(stderr, "fdopen failed: %s\n", strerror(errno));
-        close(r->fd);
-        free(r);
+        free_request(r);
+        return NULL;
     }
 
     log("Accepted request from %s:%s", r->host, r->port);
@@ -90,24 +90,30 @@ void free_request(Request *r) {
     }
 
     /* Close socket or fd */
-    close(r->fd);
-
+    if(r->fd)
+        close(r->fd);
+    debug("close complete");
     /* Free allocated strings */
-    free(r->method);
-    free(r->uri);
-    free(r->path);
-    free(r->query);
-
+    if(r->method)
+        free(r->method);
+    if(r->uri)
+        free(r->uri);
+    if(r->path)
+        free(r->path);
+    if(r->query)
+        free(r->query);
+    debug("freeing of method, uri, path, query complete");
     /* Free headers */
     //This is probably wrong
-    Header *head = r->headers;
-    Header *tmp;
-    while(head != NULL){
-        tmp = head;
-        head = head->next;
-        free(tmp);   
+    if(r->headers){
+        Header *head = r->headers;
+        Header *tmp;
+        while(head != NULL){
+            tmp = head;
+            head = head->next;
+            free(tmp);   
+        }
     }
-
     /* Free request */
     free(r);
 }
@@ -219,18 +225,14 @@ int parse_request_method(Request *r) {
  *      headers.append(header)
  **/
 int parse_request_headers(Request *r) {
-    Header *curr = NULL;
-    //if(!curr){
-    //    debug("Calloc failed: %s", strerror(errno));
-    //}
+    Header *curr = r->headers;
     char buffer[BUFSIZ];
     char *name;
     char *data;
 
-    r->headers = curr;
+    //r->headers = curr;
     /* Parse headers from socket */
     while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
-        debug("\n\n&*&*&*&*&*headerInput = %s\n\n", buffer); 
         data = strchr(buffer, (int)':');
 
         if (!data) {
@@ -238,17 +240,12 @@ int parse_request_headers(Request *r) {
             return -1;
         }
         *data++ = '\0';
-        //debug("\n\n#$#$#$#$#$data = %s\n\n", data);
-        //*data++ = '\0';
         chomp(data);
 
         name = buffer;
-        debug("name = %s", name);
         data = skip_whitespace(data);
-        debug("\n\n#$#$#$#data = %s\n\n", data);
-        curr->name = name;
-        debug("~~~~~curr->name = %s", curr->name);
-        curr->data = data; 
+        curr->name = strdup(name);
+        curr->data = strdup(data); 
         curr->next = calloc(1, sizeof(Header));
         curr = curr->next;
 

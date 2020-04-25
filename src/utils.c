@@ -40,6 +40,10 @@ char * determine_mimetype(const char *path) {
 
     /* Find file extension */
     ext = strchr(path, (int)'.');
+    if(ext == NULL){
+        debug("Ext is null");
+        return DefaultMimeType;
+    }
     ext++; 
 
     /* Open MimeTypesPath file */
@@ -51,6 +55,13 @@ char * determine_mimetype(const char *path) {
 
     /* Scan file for matching file extensions */
     while(fgets(buffer, BUFSIZ, fs)){
+        //This if takes care of the comments at the top of the file
+        if(buffer[0] == '#' || buffer[0] == ' ' || buffer[0] == '\n')
+            continue;
+        debug("****Buffer = %s", buffer);
+        debug("hello");
+        debug("ext = %s", ext);
+        debug("goodbye");
         token = strtok(buffer, ext);
         if(token == NULL)
             continue;
@@ -83,15 +94,24 @@ char * determine_mimetype(const char *path) {
 char * determine_request_path(const char *uri) {
     char buffer[BUFSIZ];
     char *fullpath;
+    char ch = '/';
 
-    if ((fullpath = realpath(uri, buffer)) == NULL) {
+    fullpath = strdup(RootPath);
+    strncat(fullpath, &ch, 1);
+    strcat(fullpath, uri);
+    
+    if (realpath(fullpath, buffer) == NULL) {
         debug("realpath failed: %s\n", strerror(errno));
         return NULL;
     }
 
-    if(strncmp(RootPath, fullpath, strlen(RootPath)) != 0)
-        return NULL;   
+    fullpath = buffer;
 
+    if(strncmp(RootPath, fullpath, strlen(RootPath)) != 0){
+        debug("Realpath does not being with RootPath");
+        return NULL;   
+        
+    }
     return fullpath;
 }
 
