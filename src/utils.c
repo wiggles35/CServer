@@ -39,19 +39,29 @@ char * determine_mimetype(const char *path) {
     FILE *fs = NULL;
 
     /* Find file extension */
-    ext++ = strchr(path, (int)'.'); 
+    ext = strchr(path, (int)'.');
+    ext++; 
 
     /* Open MimeTypesPath file */
-    fs = fopen(/etc/mime.types, "r");
+    fs = fopen(MimeTypesPath, "r");
     if (!fs) {
         debug("fopen failed: %s\n", strerror(errno));
         return DefaultMimeType;
     }
 
     /* Scan file for matching file extensions */
-    //not sure what to do here
+    while(fgets(buffer, BUFSIZ, fs)){
+        token = strtok(buffer, ext);
+        if(token == NULL)
+            continue;
+        mimetype = buffer;
+        *(skip_nonwhitespace(mimetype)) = '\0';
+        return mimetype;
+    }
+
+        
     
-    return NULL;
+    return DefaultMimeType;
 }
 
 /**

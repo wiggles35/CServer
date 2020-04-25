@@ -176,7 +176,7 @@ int parse_request_method(Request *r) {
         *(q_mark) = '\0';
     }
     else 
-        query = NULL;
+        query = "";
     
     r->method = strdup(method);
     r->uri = strdup(uri);
@@ -219,32 +219,41 @@ int parse_request_method(Request *r) {
  *      headers.append(header)
  **/
 int parse_request_headers(Request *r) {
-    Header *curr = r->headers;
+    Header *curr = NULL;
+    //if(!curr){
+    //    debug("Calloc failed: %s", strerror(errno));
+    //}
     char buffer[BUFSIZ];
     char *name;
     char *data;
 
+    r->headers = curr;
     /* Parse headers from socket */
     while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
+        debug("\n\n&*&*&*&*&*headerInput = %s\n\n", buffer); 
         data = strchr(buffer, (int)':');
+
         if (!data) {
             debug("strchr failed: %s\n", strerror(errno));
             return -1;
         }
-
         *data++ = '\0';
+        //debug("\n\n#$#$#$#$#$data = %s\n\n", data);
+        //*data++ = '\0';
         chomp(data);
 
         name = buffer;
-
-        data = skip_whitespace(++data);
-
+        debug("name = %s", name);
+        data = skip_whitespace(data);
+        debug("\n\n#$#$#$#data = %s\n\n", data);
         curr->name = name;
+        debug("~~~~~curr->name = %s", curr->name);
         curr->data = data; 
         curr->next = calloc(1, sizeof(Header));
         curr = curr->next;
 
     }
+    
 
 #ifndef NDEBUG
     for (Header *header = r->headers; header; header = header->next) {
