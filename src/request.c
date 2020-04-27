@@ -39,11 +39,12 @@ Request * accept_request(int sfd) {
         return NULL;
     }
 
-    r->headers = calloc(1, sizeof(Header));
+    /*r->headers = calloc(1, sizeof(Header));
     if(!r->headers){
         debug( "calloc: %s\n", strerror(errno));
         return NULL;
-    }
+    }*/
+    r->headers = NULL;
     
     /* Accept a client */
     r->fd = accept(sfd, &raddr, &rlen);
@@ -62,11 +63,13 @@ Request * accept_request(int sfd) {
 
     /* Open socket stream */
     r->stream = fdopen(r->fd, "w+");
+
     if (!r->stream) {
         fprintf(stderr, "fdopen failed: %s\n", strerror(errno));
         free_request(r);
         return NULL;
     }
+    r->path = NULL;
 
     log("Accepted request from %s:%s", r->host, r->port);
     return r;
@@ -90,21 +93,21 @@ void free_request(Request *r) {
     }
 
     /* Close socket or fd */
-    if(r->fd)
+    if(r->stream)
+        fclose(r->stream);
+    else
         close(r->fd);
-    debug("close complete");
     /* Free allocated strings */
     if(r->method)
         free(r->method);
     if(r->uri)
         free(r->uri);
-    if(r->path)
+    if(r->path){
         free(r->path);
+    }
     if(r->query)
         free(r->query);
-    debug("freeing of method, uri, path, query complete");
     /* Free headers */
-    //This is probably wrong
     if(r->headers){
         Header *head = r->headers;
         Header *tmp;
@@ -180,6 +183,7 @@ int parse_request_method(Request *r) {
     if(q_mark){
         query = skip_whitespace(q_mark);
         *(q_mark) = '\0';
+        query++;
     }
     else 
         query = "";
@@ -225,14 +229,17 @@ int parse_request_method(Request *r) {
  *      headers.append(header)
  **/
 int parse_request_headers(Request *r) {
-    Header *curr = r->headers;
+    Header *curr = NULL;
     char buffer[BUFSIZ];
     char *name;
     char *data;
-
-    //r->headers = curr;
     /* Parse headers from socket */
     while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
+        curr = calloc(1, sizeof(Header));
+        if(!curr){
+            debug("Calloc Failed %s", strerror(errno));
+            return -1;
+        }
         data = strchr(buffer, (int)':');
 
         if (!data) {
@@ -242,12 +249,12 @@ int parse_request_headers(Request *r) {
         *data++ = '\0';
         chomp(data);
 
-        name = buffer;
+        name = skip_whitespace(buffer);
         data = skip_whitespace(data);
         curr->name = strdup(name);
         curr->data = strdup(data); 
-        curr->next = calloc(1, sizeof(Header));
-        curr = curr->next;
+        curr->next = r->headers;
+        r->headers = curr;
 
     }
     

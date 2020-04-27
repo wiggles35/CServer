@@ -42,7 +42,7 @@ char * determine_mimetype(const char *path) {
     ext = strchr(path, (int)'.');
     if(ext == NULL){
         debug("Ext is null");
-        return DefaultMimeType;
+        return strdup(DefaultMimeType);
     }
     ext++; 
 
@@ -50,7 +50,7 @@ char * determine_mimetype(const char *path) {
     fs = fopen(MimeTypesPath, "r");
     if (!fs) {
         debug("fopen failed: %s\n", strerror(errno));
-        return DefaultMimeType;
+        return strdup(DefaultMimeType);
     }
 
     /* Scan file for matching file extensions */
@@ -58,21 +58,17 @@ char * determine_mimetype(const char *path) {
         //This if takes care of the comments at the top of the file
         if(buffer[0] == '#' || buffer[0] == ' ' || buffer[0] == '\n')
             continue;
-        debug("****Buffer = %s", buffer);
-        debug("hello");
-        debug("ext = %s", ext);
-        debug("goodbye");
         token = strtok(buffer, ext);
         if(token == NULL)
             continue;
         mimetype = buffer;
         *(skip_nonwhitespace(mimetype)) = '\0';
-        return mimetype;
+        return strdup(mimetype);
     }
 
         
     
-    return DefaultMimeType;
+    return strdup(DefaultMimeType);
 }
 
 /**
@@ -93,26 +89,23 @@ char * determine_mimetype(const char *path) {
  **/
 char * determine_request_path(const char *uri) {
     char buffer[BUFSIZ];
-    char *fullpath;
-    char ch = '/';
+    char fullpath[BUFSIZ];
 
-    fullpath = strdup(RootPath);
-    strncat(fullpath, &ch, 1);
-    strcat(fullpath, uri);
+    snprintf(fullpath, BUFSIZ, "%s/%s", RootPath, uri);
     
     if (realpath(fullpath, buffer) == NULL) {
+        debug("fullpath: %s", fullpath);
         debug("realpath failed: %s\n", strerror(errno));
         return NULL;
     }
 
-    fullpath = buffer;
 
     if(strncmp(RootPath, fullpath, strlen(RootPath)) != 0){
-        debug("Realpath does not being with RootPath");
+        debug("Realpath does not begin with RootPath");
         return NULL;   
         
     }
-    return fullpath;
+    return strdup(buffer);
 }
 
 /**

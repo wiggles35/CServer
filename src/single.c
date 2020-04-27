@@ -25,12 +25,13 @@ int single_server(int sfd) {
 
 	/* Handle request */
         handle_request(request);
-
+        debug("handle_request complete");
 	/* Free request */
         free_request(request);
     }
 
     /* Close server socket */
+    close(sfd);
     return EXIT_SUCCESS;
 }
 
