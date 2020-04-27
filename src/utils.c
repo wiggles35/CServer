@@ -45,6 +45,7 @@ char * determine_mimetype(const char *path) {
         return strdup(DefaultMimeType);
     }
     ext++; 
+    debug("ext is: %s", ext);
 
     /* Open MimeTypesPath file */
     fs = fopen(MimeTypesPath, "r");
@@ -55,14 +56,20 @@ char * determine_mimetype(const char *path) {
 
     /* Scan file for matching file extensions */
     while(fgets(buffer, BUFSIZ, fs)){
+        debug("AT TOP OF WHILE: %s", buffer);
         //This if takes care of the comments at the top of the file
         if(buffer[0] == '#' || buffer[0] == ' ' || buffer[0] == '\n')
             continue;
+        token = skip_nonwhitespace(buffer);
+        skip_whitespace(buffer);
         token = strtok(buffer, ext);
+        debug("Token: %s", token);
         if(token == NULL)
             continue;
         mimetype = buffer;
+        debug("THE BUFFER BEFORE SKIPPING nonWHITESPACE IS: %s", mimetype);
         *(skip_nonwhitespace(mimetype)) = '\0';
+        mimetype++;
         return strdup(mimetype);
     }
 

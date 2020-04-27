@@ -39,11 +39,6 @@ Request * accept_request(int sfd) {
         return NULL;
     }
 
-    /*r->headers = calloc(1, sizeof(Header));
-    if(!r->headers){
-        debug( "calloc: %s\n", strerror(errno));
-        return NULL;
-    }*/
     r->headers = NULL;
     
     /* Accept a client */

@@ -36,6 +36,7 @@ Status  handle_request(Request *r) {
     if(parse_request(r) < 0){
         debug("parse_request failed");
         result = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+        return handle_error(r, result);
     }
 
     /* Determine request path */
@@ -61,7 +62,7 @@ Status  handle_request(Request *r) {
     }
     // figure out if there is an error
     if (result != HTTP_STATUS_OK) 
-        handle_error(r, result);
+        return handle_error(r, result);
 
     log("HTTP REQUEST STATUS: %s", http_status_string(result));
 
@@ -137,12 +138,12 @@ Status  handle_file_request(Request *r) {
     fs = fopen(r->path, "r");
     if(!fs) {
         debug("fopen failed: %s\n", strerror(errno));
-        return HTTP_STATUS_NOT_FOUND;
+        return handle_error(r, HTTP_STATUS_NOT_FOUND);
     }
 
     /* Determine mimetype */
     mimetype = determine_mimetype(r->path);
-
+    debug("\nTHE MIMETYPE IS: %s\n", mimetype);
     /* Write HTTP Headers with OK status and determined Content-Type */
     fprintf(r->stream, "HTTP/1.0 200 OK\r\n");
     fprintf(r->stream, "Content-Type: %s\r\n", mimetype);
@@ -151,7 +152,6 @@ Status  handle_file_request(Request *r) {
 
     /* Read from file and write to socket in chunks */
     while ((nread = fread(buffer, 1, BUFSIZ, fs)) > 0) {
-        debug("reading from file and writing to socket");
         fwrite(buffer, 1, nread, r->stream);
     }
 

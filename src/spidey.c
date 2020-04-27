@@ -87,11 +87,12 @@ bool parse_options(int argc, char *argv[], ServerMode *mode) {
  **/
 int main(int argc, char *argv[]) {
     Status status;
-    ServerMode mode; 
+    ServerMode mode = UNKNOWN; 
 
     /* Parse command line options */
     if(!parse_options(argc, argv, &mode)){
         debug("parse options failed");
+        exit(-1);
     }
 
     /* Listen to server socket */
@@ -100,6 +101,11 @@ int main(int argc, char *argv[]) {
     /* Determine real RootPath */
     char buffer[BUFSIZ];
     RootPath = realpath(RootPath, buffer);
+    if(RootPath == NULL){
+        debug("realpath failed: %s\n", strerror(errno));
+        exit(-1);
+    }
+
     log("Listening on port %s", Port);
     debug("RootPath        = %s", RootPath);
     debug("MimeTypesPath   = %s", MimeTypesPath);
