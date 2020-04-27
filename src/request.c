@@ -239,19 +239,20 @@ int parse_request_headers(Request *r) {
     char *data;
     /* Parse headers from socket */
     while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
-        curr = calloc(1, sizeof(Header));
-        if(!curr){
-            debug("Calloc Failed %s", strerror(errno));
-            return -1;
-        }
+        
         data = strchr(buffer, (int)':');
-
         if (!data) {
             debug("strchr failed: %s\n", strerror(errno));
             return -1;
         }
         *data++ = '\0';
         chomp(data);
+        
+        curr = calloc(1, sizeof(Header));
+        if(!curr){
+            debug("Calloc Failed %s", strerror(errno));
+            return -1;
+        }
 
         name = skip_whitespace(buffer);
         data = skip_whitespace(data);
