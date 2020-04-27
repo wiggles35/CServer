@@ -61,13 +61,10 @@ char * determine_mimetype(const char *path) {
 
         token = skip_nonwhitespace(buffer);
         *token++ = '\0';
-        //token = skip_whitespace(skip_nonwhitespace(buffer));
         token = skip_whitespace(token);
 
         token = strtok(token, " \n");
-        debug("ext is: %s", ext);
         while (token != NULL) {
-            debug("\n TOKEN IS: %s", token);
             if (streq(token, ext)) {
                 break; 
             }
@@ -77,30 +74,7 @@ char * determine_mimetype(const char *path) {
         if (token == NULL) 
             continue;
     
-        /*skip_nonwhitespace(buffer) = '\0';*/
         mimetype = buffer;
-        debug("mImEtYpE is: %s", mimetype);
-        
-       /* mimetype = strtok(buffer, " ");
-
-        while ((token = skip_whitespace(strtok(NULL, " ")) != NULL) { 
-            if (streq(token, ext))
-                break; 
-        }
-        debug("Token after SKIP WHITESPACE: %s", token);
-    
-        if (streq(token, "\n")) 
-            continue;
-
-        token = strtok(token, " ");
-        if (!streq(token, ext)) {
-            if (streq(token, "\n"))
-                continue;
-            token = skip_whitespace(token);
-            token = strtok(token, " \n");
-            if (!streq(token,ext))
-                continue;
-        }*/
         
         return strdup(mimetype);
     }
@@ -134,7 +108,7 @@ char * determine_request_path(const char *uri) {
     
     if (realpath(fullpath, buffer) == NULL) {
         debug("fullpath: %s", fullpath);
-        debug("realpath failed: %s\n", strerror(errno));
+        debug("realpath failed: %s", strerror(errno));
         return NULL;
     }
 

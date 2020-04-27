@@ -143,7 +143,7 @@ Status  handle_file_request(Request *r) {
 
     /* Determine mimetype */
     mimetype = determine_mimetype(r->path);
-    debug("\nTHE MIMETYPE IS: %s\n", mimetype);
+    debug("THE MIMETYPE IS: %s", mimetype);
     /* Write HTTP Headers with OK status and determined Content-Type */
     fprintf(r->stream, "HTTP/1.0 200 OK\r\n");
     fprintf(r->stream, "Content-Type: %s\r\n", mimetype);
