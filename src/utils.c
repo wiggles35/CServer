@@ -39,13 +39,12 @@ char * determine_mimetype(const char *path) {
     FILE *fs = NULL;
 
     /* Find file extension */
-    ext = strchr(path, (int)'.');
+    ext = strrchr(path, (int)'.');
     if(ext == NULL){
         debug("Ext is null");
         return strdup(DefaultMimeType);
     }
     ext++; 
-    debug("ext is: %s", ext);
 
     /* Open MimeTypesPath file */
     fs = fopen(MimeTypesPath, "r");
@@ -56,20 +55,53 @@ char * determine_mimetype(const char *path) {
 
     /* Scan file for matching file extensions */
     while(fgets(buffer, BUFSIZ, fs)){
-        debug("AT TOP OF WHILE: %s", buffer);
         //This if takes care of the comments at the top of the file
         if(buffer[0] == '#' || buffer[0] == ' ' || buffer[0] == '\n')
             continue;
+
         token = skip_nonwhitespace(buffer);
-        skip_whitespace(buffer);
-        token = strtok(buffer, ext);
-        debug("Token: %s", token);
-        if(token == NULL)
+        *token++ = '\0';
+        //token = skip_whitespace(skip_nonwhitespace(buffer));
+        token = skip_whitespace(token);
+
+        token = strtok(token, " \n");
+        debug("ext is: %s", ext);
+        while (token != NULL) {
+            debug("\n TOKEN IS: %s", token);
+            if (streq(token, ext)) {
+                break; 
+            }
+            token = strtok(NULL, " \n");
+        }
+
+        if (token == NULL) 
             continue;
+    
+        /*skip_nonwhitespace(buffer) = '\0';*/
         mimetype = buffer;
-        debug("THE BUFFER BEFORE SKIPPING nonWHITESPACE IS: %s", mimetype);
-        *(skip_nonwhitespace(mimetype)) = '\0';
-        mimetype++;
+        debug("mImEtYpE is: %s", mimetype);
+        
+       /* mimetype = strtok(buffer, " ");
+
+        while ((token = skip_whitespace(strtok(NULL, " ")) != NULL) { 
+            if (streq(token, ext))
+                break; 
+        }
+        debug("Token after SKIP WHITESPACE: %s", token);
+    
+        if (streq(token, "\n")) 
+            continue;
+
+        token = strtok(token, " ");
+        if (!streq(token, ext)) {
+            if (streq(token, "\n"))
+                continue;
+            token = skip_whitespace(token);
+            token = strtok(token, " \n");
+            if (!streq(token,ext))
+                continue;
+        }*/
+        
         return strdup(mimetype);
     }
 
