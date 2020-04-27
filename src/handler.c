@@ -112,15 +112,20 @@ Status  handle_browse_request(Request *r) {
     /* For each entry in directory, emit HTML list item */
     fprintf(r->stream, "<ul>\n");
     for(int i = 0; i < n; i++){
-        if(strcmp(entries[i]->d_name, ".") == 0)
+        if(strcmp(entries[i]->d_name, ".") == 0) { 
+            free(entries[i]);
             continue;
-        
+        }
+
         if (strcmp(r->uri, "/") == 0)
             fprintf(r->stream, "<li>\n\t<a href=\"/%s\">%s\n</li>\n", entries[i]->d_name, entries[i]->d_name);
         else 
             fprintf(r->stream, "<li>\n\t<a href=\"%s%s\">%s</li>\n", tempUri, entries[i]->d_name, entries[i]->d_name);
-            
+        
+        free(entries[i]);    
     }
+//lookie here
+    free(entries);
     fprintf(r->stream, "</ul>\n");
     /* Return OK */
     return HTTP_STATUS_OK;
