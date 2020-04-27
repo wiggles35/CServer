@@ -24,9 +24,12 @@ int single_server(int sfd) {
         }
 
 	/* Handle request */
-        handle_request(request);
-        debug("handle_request complete");
-	/* Free request */
+        Status s;
+        if ((s = handle_request(request)) != HTTP_STATUS_OK) {
+            debug("handle request failed: %s", http_status_string(s));
+        }
+	
+        /* Free request */
         free_request(request);
     }
 

@@ -107,6 +107,10 @@ void free_request(Request *r) {
         Header *head = r->headers;
         Header *tmp;
         while(head != NULL){
+            if (head->name)
+                free(head->name);
+            if (head->data) 
+                free(head->data);
             tmp = head;
             head = head->next;
             free(tmp);   
@@ -173,6 +177,11 @@ int parse_request_method(Request *r) {
     /* Parse method and uri */
     method    = strtok(buffer, WHITESPACE);
     uri       = strtok(NULL, WHITESPACE);
+    
+    if (uri == NULL || method == NULL) {
+        debug("No method of URI");
+        return -1; 
+    }
     /* Parse query from uri */
     char* q_mark = strchr(uri, (int)'?');
     if(q_mark){

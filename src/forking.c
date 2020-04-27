@@ -29,11 +29,13 @@ int forking_server(int sfd) {
         if(pid == 0){   //child
             debug("handle child connection");
             Status s;
+            //close server socket
+            close(sfd);
             if((s = handle_request(r)) != HTTP_STATUS_OK){
-                debug("handle requsest: %d", s);
+                debug("handle request failed: %s", http_status_string(s));
+                exit(EXIT_FAILURE);
             } 
-                
-            fclose(r->stream);
+            free_request(r); 
             exit(EXIT_SUCCESS);
         }
         else {  // parent
@@ -42,6 +44,7 @@ int forking_server(int sfd) {
     }
 
     /* Close server socket */
+    close(sfd);
     return EXIT_SUCCESS;
 }
 

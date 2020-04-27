@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <ctype.h> 
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -35,9 +36,17 @@ Status  handle_request(Request *r) {
 
     if(parse_request(r) < 0){
         debug("parse_request failed");
-        result = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+        //free_request(r); // added for memory issue
+        result = HTTP_STATUS_BAD_REQUEST;
         return handle_error(r, result);
     }
+
+    /* Error check for Bad Request/
+    if (r->method == NULL || r->uri == NULL) {
+        result = HTTP_STATUS_BAD_REQUEST;
+        return handle_error(r, result);
+    }
+    */
 
     /* Determine request path */
     r->path = determine_request_path(r->uri);
@@ -193,7 +202,17 @@ Status  handle_cgi_request(Request *r) {
 
     /* Export CGI environment variables from request headers */
     for(Header *h=r->headers; h; h=h->next){
-        setenv(h->name, h->data, 1);
+        char temp[BUFSIZ] = "HTTP_";
+        strcat(temp, h->name);
+        for (char *c = temp; *c; c++) {
+            if (*c == (int)'-') {
+                *c = '_';
+            } 
+            else
+                *c = toupper(*c);
+        }
+        setenv(temp, h->data, 1);
+        debug("setting CGI env variable: name: %s data: %s", temp, h->data);
     }
 
     /* POpen CGI Script */
