@@ -36,17 +36,9 @@ Status  handle_request(Request *r) {
 
     if(parse_request(r) < 0){
         debug("parse_request failed");
-        //free_request(r); // added for memory issue
         result = HTTP_STATUS_BAD_REQUEST;
         return handle_error(r, result);
     }
-
-    /* Error check for Bad Request/
-    if (r->method == NULL || r->uri == NULL) {
-        result = HTTP_STATUS_BAD_REQUEST;
-        return handle_error(r, result);
-    }
-    */
 
     /* Determine request path */
     r->path = determine_request_path(r->uri);
@@ -69,7 +61,7 @@ Status  handle_request(Request *r) {
         else 
             result = handle_file_request(r);
     }
-    // figure out if there is an error
+    
     if (result != HTTP_STATUS_OK) 
         return handle_error(r, result);
 
@@ -124,7 +116,7 @@ Status  handle_browse_request(Request *r) {
         
         free(entries[i]);    
     }
-//lookie here
+
     free(entries);
     fprintf(r->stream, "</ul>\n");
     /* Return OK */
@@ -158,6 +150,7 @@ Status  handle_file_request(Request *r) {
     /* Determine mimetype */
     mimetype = determine_mimetype(r->path);
     debug("THE MIMETYPE IS: %s", mimetype);
+
     /* Write HTTP Headers with OK status and determined Content-Type */
     fprintf(r->stream, "HTTP/1.0 200 OK\r\n");
     fprintf(r->stream, "Content-Type: %s\r\n", mimetype);
