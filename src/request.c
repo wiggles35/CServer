@@ -92,16 +92,17 @@ void free_request(Request *r) {
         fclose(r->stream);
     else
         close(r->fd);
+
     /* Free allocated strings */
     if(r->method)
         free(r->method);
     if(r->uri)
         free(r->uri);
-    if(r->path){
+    if(r->path)
         free(r->path);
-    }
     if(r->query)
         free(r->query);
+
     /* Free headers */
     if(r->headers){
         Header *head = r->headers;
@@ -116,6 +117,7 @@ void free_request(Request *r) {
             free(tmp);   
         }
     }
+
     /* Free request */
     free(r);
 }
