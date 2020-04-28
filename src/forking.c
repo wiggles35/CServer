@@ -33,7 +33,7 @@ int forking_server(int sfd) {
             debug("handle child connection");
             Status s;
 
-           // close(sfd);
+            close(sfd);
             if((s = handle_request(r)) != HTTP_STATUS_OK){
                 debug("handle request failed: %s", http_status_string(s));
                 exit(EXIT_FAILURE);
