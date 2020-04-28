@@ -39,11 +39,49 @@ char * determine_mimetype(const char *path) {
     FILE *fs = NULL;
 
     /* Find file extension */
+    ext = strrchr(path, (int)'.');
+    if(ext == NULL){
+        debug("Ext is null");
+        return strdup(DefaultMimeType);
+    }
+    ext++; 
 
     /* Open MimeTypesPath file */
+    fs = fopen(MimeTypesPath, "r");
+    if (!fs) {
+        debug("fopen failed: %s\n", strerror(errno));
+        return strdup(DefaultMimeType);
+    }
 
     /* Scan file for matching file extensions */
-    return NULL;
+    while(fgets(buffer, BUFSIZ, fs)){
+        //This if takes care of the comments at the top of the file
+        if(buffer[0] == '#' || buffer[0] == ' ' || buffer[0] == '\n')
+            continue;
+
+        token = skip_nonwhitespace(buffer);
+        *token++ = '\0';
+        token = skip_whitespace(token);
+
+        token = strtok(token, " \n");
+        while (token != NULL) {
+            if (streq(token, ext)) {
+                break; 
+            }
+            token = strtok(NULL, " \n");
+        }
+
+        if (token == NULL) 
+            continue;
+    
+        mimetype = buffer;
+        
+        return strdup(mimetype);
+    }
+
+        
+    
+    return strdup(DefaultMimeType);
 }
 
 /**
@@ -63,7 +101,24 @@ char * determine_mimetype(const char *path) {
  * string must later be free'd.
  **/
 char * determine_request_path(const char *uri) {
-    return NULL;
+    char buffer[BUFSIZ];
+    char fullpath[BUFSIZ];
+
+    snprintf(fullpath, BUFSIZ, "%s/%s", RootPath, uri);
+    
+    if (realpath(fullpath, buffer) == NULL) {
+        debug("fullpath: %s", fullpath);
+        debug("realpath failed: %s", strerror(errno));
+        return NULL;
+    }
+
+
+    if(strncmp(RootPath, fullpath, strlen(RootPath)) != 0){
+        debug("Realpath does not begin with RootPath");
+        return NULL;   
+        
+    }
+    return strdup(buffer);
 }
 
 /**
@@ -83,7 +138,7 @@ const char * http_status_string(Status status) {
         "418 I'm A Teapot",
     };
 
-    return NULL;
+    return StatusStrings[status];
 }
 
 /**
@@ -93,6 +148,8 @@ const char * http_status_string(Status status) {
  * @return  Point to first whitespace character in s.
  **/
 char * skip_nonwhitespace(char *s) {
+    while (*s != '\n' && *s != ' ' && *s != '\t' && *s != '\r') 
+        s++;
     return s;
 }
 
@@ -103,6 +160,8 @@ char * skip_nonwhitespace(char *s) {
  * @return  Point to first non-whitespace character in s.
  **/
 char * skip_whitespace(char *s) {
+    while (*s == '\n' || *s == ' ' || *s == '\t' || *s == '\r') 
+        s++;
     return s;
 }
 

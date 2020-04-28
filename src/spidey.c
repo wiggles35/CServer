@@ -86,20 +86,39 @@ bool parse_options(int argc, char *argv[], ServerMode *mode) {
  * Parses command line options and starts appropriate server
  **/
 int main(int argc, char *argv[]) {
-    ServerMode mode;
+    Status status;
+    ServerMode mode = UNKNOWN; 
 
     /* Parse command line options */
+    if(!parse_options(argc, argv, &mode)){
+        debug("parse options failed");
+        exit(-1);
+    }
 
     /* Listen to server socket */
+    int sfd = socket_listen(Port);
 
     /* Determine real RootPath */
+    char buffer[BUFSIZ];
+    RootPath = realpath(RootPath, buffer);
+    if(RootPath == NULL){
+        debug("realpath failed: %s\n", strerror(errno));
+        exit(-1);
+    }
+
     log("Listening on port %s", Port);
     debug("RootPath        = %s", RootPath);
     debug("MimeTypesPath   = %s", MimeTypesPath);
     debug("DefaultMimeType = %s", DefaultMimeType);
     debug("ConcurrencyMode = %s", mode == SINGLE ? "Single" : "Forking");
-
+    
     /* Start either forking or single HTTP server */
+    if(mode == SINGLE){
+        status = single_server(sfd);
+    }
+    else{
+        status = forking_server(sfd);
+    }
     return status;
 }
 

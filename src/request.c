@@ -30,22 +30,44 @@ int parse_request_headers(Request *r);
 Request * accept_request(int sfd) {
     Request *r;
     struct sockaddr raddr;
-    socklen_t rlen;
+    socklen_t rlen = sizeof(struct sockaddr);
 
     /* Allocate request struct (zeroed) */
+    r = calloc(1, sizeof(Request));
+    if(!r){
+        debug( "calloc: %s\n", strerror(errno));
+        return NULL;
+    }
 
+    r->headers = NULL;
+    
     /* Accept a client */
+    r->fd = accept(sfd, &raddr, &rlen);
+    if (r->fd < 0) {
+        debug( "accept failed: %s\n", strerror(errno));
+        free_request(r);
+        return NULL;
+    }
 
     /* Lookup client information */
+    if(getnameinfo(&raddr, rlen, r->host, sizeof(r->host), r->port, sizeof(r->port), NI_NUMERICHOST | NI_NUMERICSERV) < 0){
+        debug("getnameinfo: %s\n", gai_strerror(errno));
+        free_request(r);
+        return NULL;
+    }
 
     /* Open socket stream */
+    r->stream = fdopen(r->fd, "w+");
+
+    if (!r->stream) {
+        fprintf(stderr, "fdopen failed: %s\n", strerror(errno));
+        free_request(r);
+        return NULL;
+    }
+    r->path = NULL;
 
     log("Accepted request from %s:%s", r->host, r->port);
     return r;
-
-fail:
-    /* Deallocate request struct */
-    return NULL;
 }
 
 /**
@@ -66,12 +88,36 @@ void free_request(Request *r) {
     }
 
     /* Close socket or fd */
-
+    if(r->stream)
+        fclose(r->stream);
+    else
+        close(r->fd);
     /* Free allocated strings */
-
+    if(r->method)
+        free(r->method);
+    if(r->uri)
+        free(r->uri);
+    if(r->path){
+        free(r->path);
+    }
+    if(r->query)
+        free(r->query);
     /* Free headers */
-
+    if(r->headers){
+        Header *head = r->headers;
+        Header *tmp;
+        while(head != NULL){
+            if (head->name)
+                free(head->name);
+            if (head->data) 
+                free(head->data);
+            tmp = head;
+            head = head->next;
+            free(tmp);   
+        }
+    }
     /* Free request */
+    free(r);
 }
 
 /**
@@ -85,8 +131,17 @@ void free_request(Request *r) {
  **/
 int parse_request(Request *r) {
     /* Parse HTTP Request Method */
+    if (parse_request_method(r) < 0) {
+        debug("parse_request_method failed: %s", strerror(errno));
+        return -1;
+    }
 
-    /* Parse HTTP Requet Headers*/
+    /* Parse HTTP Requset Headers*/
+    if (parse_request_headers(r) < 0) {
+        debug("parse_request_headers failed: %s", strerror(errno));
+        return -1;
+    }
+
     return 0;
 }
 
@@ -114,10 +169,32 @@ int parse_request_method(Request *r) {
     char *query;
 
     /* Read line from socket */
+    if(!fgets(buffer, BUFSIZ, r->stream)){
+        debug("fgets failed");
+        return -1;
+    }
 
     /* Parse method and uri */
-
+    method    = strtok(buffer, WHITESPACE);
+    uri       = strtok(NULL, WHITESPACE);
+    
+    if (uri == NULL || method == NULL) {
+        debug("No method of URI");
+        return -1; 
+    }
     /* Parse query from uri */
+    char* q_mark = strchr(uri, (int)'?');
+    if(q_mark){
+        query = skip_whitespace(q_mark);
+        *(q_mark) = '\0';
+        query++;
+    }
+    else 
+        query = "";
+    
+    r->method = strdup(method);
+    r->uri = strdup(uri);
+    r->query = strdup(query);
 
     /* Record method, uri, and query in request struct */
     debug("HTTP METHOD: %s", r->method);
@@ -126,8 +203,6 @@ int parse_request_method(Request *r) {
 
     return 0;
 
-fail:
-    return -1;
 }
 
 /**
@@ -162,8 +237,32 @@ int parse_request_headers(Request *r) {
     char buffer[BUFSIZ];
     char *name;
     char *data;
-
     /* Parse headers from socket */
+    while(fgets(buffer, BUFSIZ, r->stream) && strlen(buffer) > 2) {
+        
+        data = strchr(buffer, (int)':');
+        if (!data) {
+            debug("strchr failed: %s\n", strerror(errno));
+            return -1;
+        }
+        *data++ = '\0';
+        chomp(data);
+        
+        curr = calloc(1, sizeof(Header));
+        if(!curr){
+            debug("Calloc Failed %s", strerror(errno));
+            return -1;
+        }
+
+        name = skip_whitespace(buffer);
+        data = skip_whitespace(data);
+        curr->name = strdup(name);
+        curr->data = strdup(data); 
+        curr->next = r->headers;
+        r->headers = curr;
+
+    }
+    
 
 #ifndef NDEBUG
     for (Header *header = r->headers; header; header = header->next) {
@@ -172,8 +271,6 @@ int parse_request_headers(Request *r) {
 #endif
     return 0;
 
-fail:
-    return -1;
 }
 
 /* vim: set expandtab sts=4 sw=4 ts=8 ft=c: */

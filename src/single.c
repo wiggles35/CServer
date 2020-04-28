@@ -17,13 +17,24 @@ int single_server(int sfd) {
     /* Accept and handle HTTP request */
     while (true) {
     	/* Accept request */
+        Request *request = accept_request(sfd);
+        if (!request) {
+            log("Unable to accept request: %s", strerror(errno));
+            continue;
+        }
 
 	/* Handle request */
-
-	/* Free request */
+        Status s;
+        if ((s = handle_request(request)) != HTTP_STATUS_OK) {
+            debug("handle request failed: %s", http_status_string(s));
+        }
+	
+        /* Free request */
+        free_request(request);
     }
 
     /* Close server socket */
+    close(sfd);
     return EXIT_SUCCESS;
 }
 
