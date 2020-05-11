@@ -13,7 +13,7 @@ This is the [Final Project] for [CSE 20289 Systems Programming (Spring 2020)].
 
 ## Errata
 
-We are currently unaware of anything that does not work (quite) right, aside from memory that is still reachable.
+We are currently unaware of anything that does not work.
 
 ## Contributions
 
